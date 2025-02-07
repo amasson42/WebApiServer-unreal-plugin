@@ -1,7 +1,7 @@
 {
 	"FileVersion": 3,
 	"Version": 1,
-	"VersionName": "1.0",
+	"VersionName": "0.1",
 	"FriendlyName": "WebsocketAPI",
 	"Description": "Toolset to create a websocket based API",
 	"Category": "Web",
@@ -14,6 +14,13 @@
 	"IsBetaVersion": true,
 	"IsExperimentalVersion": false,
 	"Installed": false,
+    "Modules": [
+        {
+            "Name": "WebsocketAPI",
+            "Type": "Runtime",
+            "LoadingPhase": "Default"
+        }
+    ]
 	"Plugins": [
 		{
 			"Name": "WebSocketNetworking",
