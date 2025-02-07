@@ -1,0 +1,23 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "WebsocketAPI",
+	"Description": "Toolset to create a websocket based API",
+	"Category": "Web",
+	"CreatedBy": "Amasson",
+	"CreatedByURL": "",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"SupportURL": "",
+	"CanContainContent": false,
+	"IsBetaVersion": true,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"Plugins": [
+		{
+			"Name": "WebSocketNetworking",
+			"Enabled": true
+		}
+	]
+}
