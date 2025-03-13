@@ -87,19 +87,19 @@ FString UJsonRpcApiRouter::HandleMessage(const FString &Message)
     return StringResponse;
 }
 
-TSharedPtr<FJsonObject> MakeErrorJson(const FString &Id, const FString &Error)
+TSharedPtr<FJsonObject> MakeErrorJson(int32 Id, const FString &Error)
 {
     TSharedPtr<FJsonObject> ErrorJson = MakeShared<FJsonObject>();
 
-    ErrorJson->SetStringField(TEXT("id"), Id);
+    ErrorJson->SetNumberField(TEXT("id"), Id);
     ErrorJson->SetStringField(TEXT("error"), Error);
     return ErrorJson;
 }
 
 TSharedPtr<FJsonObject> UJsonRpcApiRouter::HandleJsonMessage(const TSharedPtr<FJsonObject> &JsonMessage)
 {
-    FString Id;
-    bool bShouldReturn = JsonMessage->TryGetStringField(TEXT("id"), Id);
+    int32 Id;
+    bool bShouldReturn = JsonMessage->TryGetNumberField(TEXT("id"), Id);
 
     FString Method;
     if (!JsonMessage->TryGetStringField(TEXT("method"), Method))
@@ -144,7 +144,7 @@ TSharedPtr<FJsonObject> UJsonRpcApiRouter::HandleJsonMessage(const TSharedPtr<FJ
     }
 
     TSharedPtr<FJsonObject> ReturnMessage = MakeShared<FJsonObject>();
-    ReturnMessage->SetStringField(TEXT("id"), *Id);
+    ReturnMessage->SetNumberField(TEXT("id"), Id);
     ReturnMessage->SetField(TEXT("result"), ReturnValue);
     return ReturnMessage;
 }
