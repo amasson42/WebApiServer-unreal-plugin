@@ -23,7 +23,7 @@ public:
     FOnMessageRecieved OnMessageRecieved;
 
     UFUNCTION(BlueprintCallable)
-    bool SendMessage(const FString &message);
+    bool SendMessage(const FString &Message);
 
     UFUNCTION(BlueprintCallable)
     bool SendData(const TArray<uint8> &Data);
