@@ -1,15 +1,15 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
-#include "WebsocketAPI.h"
+#include "WebApiServer.h"
 
-#define LOCTEXT_NAMESPACE "FWebsocketAPIModule"
+#define LOCTEXT_NAMESPACE "FWebApiServerModule"
 
-void FWebsocketAPIModule::StartupModule()
+void FWebApiServerModule::StartupModule()
 {
 	// This code will execute after your module is loaded into memory; the exact timing is specified in the .uplugin file per-module
 }
 
-void FWebsocketAPIModule::ShutdownModule()
+void FWebApiServerModule::ShutdownModule()
 {
 	// This function may be called during shutdown to clean up your module.  For modules that support dynamic reloading,
 	// we call this function before unloading the module.
@@ -17,4 +17,4 @@ void FWebsocketAPIModule::ShutdownModule()
 
 #undef LOCTEXT_NAMESPACE
 	
-IMPLEMENT_MODULE(FWebsocketAPIModule, WebsocketAPI)
+IMPLEMENT_MODULE(FWebApiServerModule, WebApiServer)

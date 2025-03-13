@@ -2,9 +2,9 @@
 
 using UnrealBuildTool;
 
-public class WebsocketAPI : ModuleRules
+public class WebApiServer : ModuleRules
 {
-	public WebsocketAPI(ReadOnlyTargetRules Target) : base(Target)
+	public WebApiServer(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 		
@@ -38,6 +38,8 @@ public class WebsocketAPI : ModuleRules
 				"Engine",
 				"Slate",
 				"SlateCore",
+                "WebSocketNetworking",
+                "Json",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

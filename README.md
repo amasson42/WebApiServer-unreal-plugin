@@ -1,1 +1,1 @@
-# WebsocketAPI plugin
+# WebApiServer plugin
