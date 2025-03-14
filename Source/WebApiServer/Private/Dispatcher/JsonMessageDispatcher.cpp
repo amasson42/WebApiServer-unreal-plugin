@@ -3,35 +3,48 @@
 
 #include "Dispatcher/JsonMessageDispatcher.h"
 
-void UJsonMessageDispatcher::AddRequestHandler(const FString& Method, const FJsonRequestHandler& Handler)
+
+bool UJsonMessageDispatcher::RegisterRequestHandler(const FString& Method, const FJsonRequestHandler& Handler, bool bOverride)
 {
-    RequestHandlers.Add(Method, Handler);
+    return false;
 }
 
-void UJsonMessageDispatcher::RemoveRequestHandler(const FString& Method, const FJsonRequestHandler& Handler)
+bool UJsonMessageDispatcher::IsRequestHandlerRegistered(const FString& Method, const FJsonRequestHandler& Handler) const
 {
-    // TODO:
+    return false;
 }
 
-void UJsonMessageDispatcher::AddNotificationCallback(const FString& Method, const FJsonNotificationCallback& Callback)
+bool UJsonMessageDispatcher::UnregisterRequestHandler(const FString& Method, const FJsonRequestHandler& Handler)
 {
-    NotificationCallbacks.Add(Method, Callback);
+    return false;
 }
 
-void UJsonMessageDispatcher::RemoveNotificationCallback(const FString& Method, const FJsonNotificationCallback& Callback)
+void UJsonMessageDispatcher::RegisterNotificationCallback(const FString& Method, const FJsonNotificationCallback& Callback)
 {
-    // TODO:
+
+}
+
+bool UJsonMessageDispatcher::IsNotificationCallbackRegistered(const FString& Method, const FJsonNotificationCallback& Callback) const
+{
+    return false;
+}
+
+void UJsonMessageDispatcher::UnregisterNotificationCallback(const FString& Method, const FJsonNotificationCallback& Callback)
+{
+
 }
 
 
-void UJsonMessageDispatcher::HandleMessage(const FString& Message)
+/** Message handling */
+
+void UJsonMessageDispatcher::HandleMessage(const FString& Message, TScriptInterface<IMessageSender> MessageSender)
 {
     // TODO:
     // Add parameter IMessageCallback that can send a message as a response
     // 
 }
 
-void UJsonMessageDispatcher::HandleJsonMessage(const FJsonObjectWrapper& JsonMessage)
+void UJsonMessageDispatcher::HandleJsonMessage(const FJsonObjectWrapper& JsonMessage, TScriptInterface<IMessageSender> MessageSender)
 {
 
 }

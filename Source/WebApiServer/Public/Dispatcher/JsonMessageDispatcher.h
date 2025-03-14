@@ -6,6 +6,7 @@
 #include "UObject/NoExportTypes.h"
 #include "Serialization/JsonTypes.h"
 #include "JsonObjectWrapper.h"
+#include "Messaging/MessageSender.h"
 #include "JsonMessageDispatcher.generated.h"
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(FJsonRequestHandler, FJsonObjectWrapper, Params, FJsonObjectWrapper&, Result);
@@ -21,26 +22,38 @@ class WEBAPISERVER_API UJsonMessageDispatcher : public UObject
 
 public:
 
-    UFUNCTION(BlueprintCallable)
-    void AddRequestHandler(const FString& Method, const FJsonRequestHandler& Handler);
+    /** Register a request handler. Request handlers are unique per methods. */
+    UFUNCTION(BlueprintCallable, Category = "Handler|Request")
+    bool RegisterRequestHandler(const FString& Method, const FJsonRequestHandler& Handler, bool bOverride = false);
 
-    UFUNCTION(BlueprintCallable)
-    void RemoveRequestHandler(const FString& Method, const FJsonRequestHandler& Handler);
+    /** Check if a request handler is registered */
+    UFUNCTION(BlueprintCallable, Category = "Handler|Request")
+    bool IsRequestHandlerRegistered(const FString& Method, const FJsonRequestHandler& Handler) const;
 
-    UFUNCTION(BlueprintCallable)
-    void AddNotificationCallback(const FString& Method, const FJsonNotificationCallback& Callback);
+    /** Unregister a request handler */
+    UFUNCTION(BlueprintCallable, Category = "Handler|Request")
+    bool UnregisterRequestHandler(const FString& Method, const FJsonRequestHandler& Handler);
 
-    UFUNCTION(BlueprintCallable)
-    void RemoveNotificationCallback(const FString& Method, const FJsonNotificationCallback& Callback);
+    /** Register a notification callback. Notification callbacks are not unique per methods. */
+    UFUNCTION(BlueprintCallable, Category = "Handler|Notification")
+    void RegisterNotificationCallback(const FString& Method, const FJsonNotificationCallback& Callback);
+
+    /** Check if a notification callback is registered */
+    UFUNCTION(BlueprintCallable, Category = "Handler|Notification")
+    bool IsNotificationCallbackRegistered(const FString& Method, const FJsonNotificationCallback& Callback) const;
+
+    /** Unregister a notification h */
+    UFUNCTION(BlueprintCallable, Category = "Handler|Notification")
+    void UnregisterNotificationCallback(const FString& Method, const FJsonNotificationCallback& Callback);
 
 
     /** Message handling */
 
     UFUNCTION(BlueprintCallable) // TODO: Create MessageSender and add it as parameter to be used for returning result
-    void HandleMessage(const FString& Message);
+    void HandleMessage(const FString& Message, TScriptInterface<IMessageSender> MessageSender);
 
     UFUNCTION(BlueprintCallable)
-    void HandleJsonMessage(const FJsonObjectWrapper& JsonMessage);
+    void HandleJsonMessage(const FJsonObjectWrapper& JsonMessage, TScriptInterface<IMessageSender> MessageSender);
 
 private:
 
