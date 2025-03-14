@@ -9,16 +9,16 @@
 
 class UWebSocketServerWrapper;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnMessageRecieved, UWebSocketClientConnectionWrapper *, Client,
-                                             const FString &, Payload);
-
-UCLASS(BlueprintType)
+UCLASS(ClassGroup = (Networking), BlueprintType)
 class WEBAPISERVER_API UWebSocketClientConnectionWrapper : public UObject, public IMessageSender
 {
     GENERATED_BODY()
 
 public:
     UWebSocketClientConnectionWrapper();
+
+    DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnMessageRecieved, UWebSocketClientConnectionWrapper*, Client,
+                                             const FString&, Message);
 
     UPROPERTY(BlueprintAssignable)
     FOnMessageRecieved OnMessageRecieved;
