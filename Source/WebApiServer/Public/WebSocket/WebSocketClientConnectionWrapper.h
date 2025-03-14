@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "INetworkingWebSocket.h"
+#include "Messaging/MessageSender.h"
 #include "WebSocketClientConnectionWrapper.generated.h"
 
 class UWebSocketServerWrapper;
@@ -12,7 +13,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnMessageRecieved, UWebSocketClien
                                              const FString &, Payload);
 
 UCLASS(BlueprintType)
-class WEBAPISERVER_API UWebSocketClientConnectionWrapper : public UObject
+class WEBAPISERVER_API UWebSocketClientConnectionWrapper : public UObject, public IMessageSender
 {
     GENERATED_BODY()
 
@@ -22,8 +23,7 @@ public:
     UPROPERTY(BlueprintAssignable)
     FOnMessageRecieved OnMessageRecieved;
 
-    UFUNCTION(BlueprintCallable)
-    bool SendMessage(const FString &Message);
+    virtual bool SendMessage_Implementation(const FString &Message);
 
     UFUNCTION(BlueprintCallable)
     bool SendData(const TArray<uint8> &Data);
