@@ -10,6 +10,14 @@ UWebSocketServerWrapper::~UWebSocketServerWrapper()
     StopServer();
 }
 
+UWebSocketServerWrapper* UWebSocketServerWrapper::NewWebSocketServer(UObject* Outer, int32 Port)
+{
+    UWebSocketServerWrapper *NewServer = NewObject<UWebSocketServerWrapper>(Outer);
+    NewServer->StartServer(Port);
+
+    return NewServer;
+}
+
 void UWebSocketServerWrapper::StartServer(int32 Port)
 {
     WebSocketPort = Port;
