@@ -19,10 +19,10 @@ void UWebSocketClientConnectionWrapper::Initialize(UWebSocketServerWrapper *InSe
 	NetworkingWebSocket->SetReceiveCallBack(ReceiveCallBack);
 }
 
-bool UWebSocketClientConnectionWrapper::SendMessage(const FString& Payload)
+bool UWebSocketClientConnectionWrapper::SendMessage_Implementation(const FString& Message)
 {
 	TArray<uint8> Data;
-	FTCHARToUTF8 Converter(*Payload);
+	FTCHARToUTF8 Converter(*Message);
 	Data.Append((uint8*)Converter.Get(), Converter.Length());
 
 	return SendData(Data);
