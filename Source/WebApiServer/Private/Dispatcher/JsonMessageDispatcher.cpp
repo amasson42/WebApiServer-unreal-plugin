@@ -19,6 +19,22 @@ bool UJsonMessageDispatcher::RegisterRequestHandler(const FString& Method, const
     return true;
 }
 
+bool UJsonMessageDispatcher::RegisterRequestHandler(const FString& Method, const TJsonRequestHandlerLambda& Handler, bool bOverride)
+{
+    if (!bOverride)
+    {
+        auto* CurrentHandlerPtr = RequestHandlers.Find(Method);
+        if (CurrentHandlerPtr && CurrentHandlerPtr->IsValid())
+            return false;
+    }
+
+    auto NewHandler = MakeShared<FJsonRequestHandlerWithLambda>();
+    NewHandler->Lambda = Handler;
+
+    RequestHandlers.Add(Method, NewHandler);
+    return true;
+}
+
 bool UJsonMessageDispatcher::IsRequestHandlerRegistered(const FString& Method, const FJsonRequestHandlerDelegate& Handler) const
 {
     // TODO: Check if of correct type and correct handler
@@ -39,6 +55,17 @@ void UJsonMessageDispatcher::RegisterNotificationCallback(const FString& Method,
 {
     auto NewHandler = MakeShared<FJsonNotificationHandlerWithDelegate>();
     NewHandler->Delegate = Callback;
+
+    if (TArray<TSharedPtr<FJsonNotificationHandler>>* MethodHandlers = NotificationHandlers.Find(Method))
+        MethodHandlers->Add(NewHandler);
+    else
+        NotificationHandlers.Add(Method, {NewHandler});
+}
+
+void UJsonMessageDispatcher::RegisterNotificationCallback(const FString& Method, const TJsonNotificationHandlerLambda& Callback)
+{
+    auto NewHandler = MakeShared<FJsonNotificationHandlerWithLambda>();
+    NewHandler->Lambda = Callback;
 
     if (TArray<TSharedPtr<FJsonNotificationHandler>>* MethodHandlers = NotificationHandlers.Find(Method))
         MethodHandlers->Add(NewHandler);
