@@ -79,6 +79,10 @@ public:
 
 private:
 
+    void HandleRequest(int32 Id, const FString& Method, const TSharedPtr<FJsonValue>& Params, TScriptInterface<IMessageSender> MessageSender);
+    void HandleNotification(const FString& Method, const TSharedPtr<FJsonValue>& Params);
+
+
     TMap<FString, TSharedPtr<FJsonRequestHandler>> RequestHandlers;
     TMap<FString, TArray<TSharedPtr<FJsonNotificationHandler>>> NotificationHandlers;
 

@@ -156,43 +156,53 @@ TSharedPtr<FJsonObject> MakeErrorJson(int32 Id, const FString &Error)
 void UJsonMessageDispatcher::HandleJsonMessage(const TSharedPtr<FJsonObject>& JsonMessage, TScriptInterface<IMessageSender> MessageSender)
 {
     int32 Id;
-    bool bShouldReturn = JsonMessage->TryGetNumberField(TEXT(JSONRPC_ID), Id);
+    bool bHasId = JsonMessage->TryGetNumberField(TEXT(JSONRPC_ID), Id);
 
     FString Method;
-    if (!JsonMessage->TryGetStringField(TEXT(JSONRPC_METHOD), Method))
-    {
-        if (bShouldReturn)
-            SendJsonResponse(MakeErrorJson(Id, TEXT("no method in request")), MessageSender);
-        return;
-    }
+    bool bHasMethod = JsonMessage->TryGetStringField(TEXT(JSONRPC_METHOD), Method);
 
-    if (bShouldReturn)
+    if (bHasMethod)
     {
-        TSharedPtr<FJsonRequestHandler>* Handler = RequestHandlers.Find(Method);
-        if (Handler == nullptr || !Handler->IsValid())
-            return SendJsonResponse(MakeErrorJson(Id, FString::Printf(TEXT("no handlers for method %s"), *Method)), MessageSender);
-
-        (*Handler)->HandleRequest(JsonMessage->TryGetField(TEXT(JSONRPC_PARAMS)),
-            [Id, MessageSender](const TSharedPtr<FJsonValue>& Response)
-            {
-            TSharedPtr<FJsonObject> JsonResponse = MakeShared<FJsonObject>();
-            JsonResponse->SetNumberField(TEXT(JSONRPC_ID), Id);
-                JsonResponse->SetObjectField(TEXT(JSONRPC_RESULT), Response->AsObject());
-                SendJsonResponse(JsonResponse, MessageSender);
-            }, [Id, MessageSender](const FString& Error)
-            {
-                SendJsonResponse(MakeErrorJson(Id, Error), MessageSender);
-            });
+        if (bHasId)
+            HandleRequest(Id, Method, JsonMessage->TryGetField(TEXT(JSONRPC_PARAMS)), MessageSender);
+        else
+            HandleNotification(Method, JsonMessage->TryGetField(TEXT(JSONRPC_PARAMS)));
     }
     else
     {
-        auto* Handlers = NotificationHandlers.Find(Method);
-        if (!Handlers)
-            return;
+        // TODO: Handle request results (or errors)
+        if (bHasId)
+            SendJsonResponse(MakeErrorJson(Id, TEXT("no method in request")), MessageSender);
+    }
+}
 
-        for (const auto& Handler : *Handlers)
+void UJsonMessageDispatcher::HandleRequest(int32 Id,const FString& Method, const TSharedPtr<FJsonValue>& Params, TScriptInterface<IMessageSender> MessageSender)
+{
+    TSharedPtr<FJsonRequestHandler>* Handler = RequestHandlers.Find(Method);
+    if (Handler == nullptr || !Handler->IsValid())
+        return SendJsonResponse(MakeErrorJson(Id, FString::Printf(TEXT("no handlers for method %s"), *Method)), MessageSender);
+
+    (*Handler)->HandleRequest(Params,
+        [Id, MessageSender](const TSharedPtr<FJsonValue>& Result)
         {
-            Handler->HandleNotification(JsonMessage->TryGetField(TEXT(JSONRPC_PARAMS)));
-        }
+            TSharedPtr<FJsonObject> JsonResponse = MakeShared<FJsonObject>();
+            JsonResponse->SetNumberField(TEXT(JSONRPC_ID), Id);
+            JsonResponse->SetField(TEXT(JSONRPC_RESULT), Result);
+            SendJsonResponse(JsonResponse, MessageSender);
+        }, [Id, MessageSender](const FString& Error)
+        {
+            SendJsonResponse(MakeErrorJson(Id, Error), MessageSender);
+        });
+}
+
+void UJsonMessageDispatcher::HandleNotification(const FString& Method, const TSharedPtr<FJsonValue>& Params)
+{
+    auto* Handlers = NotificationHandlers.Find(Method);
+    if (!Handlers)
+        return;
+
+    for (const auto& Handler : *Handlers)
+    {
+        Handler->HandleNotification(Params);
     }
 }
