@@ -1,0 +1,158 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include "Dispatcher/JsonMessageDispatcher.h"
+#include "JsonHandlers.generated.h"
+
+
+USTRUCT()
+struct FJsonRequestHandler
+{
+    GENERATED_BODY()
+
+    virtual ~FJsonRequestHandler() {}
+
+    virtual void HandleRequest(
+        const TSharedPtr<FJsonValue>& Param,
+        const TJsonRequestCompletionCallback& Completion,
+        const TJsonRequestErrorCallback& Error)
+    {}
+};
+
+/** RequestHandler using Delegate */
+USTRUCT()
+struct FJsonRequestHandlerWithDelegate : public FJsonRequestHandler
+{
+    GENERATED_BODY()
+
+    virtual ~FJsonRequestHandlerWithDelegate() override {}
+
+    virtual void HandleRequest(
+        const TSharedPtr<FJsonValue>& Param,
+        const TJsonRequestCompletionCallback& Completion,
+        const TJsonRequestErrorCallback& Error
+    ) override
+    {
+        FJsonObjectWrapper ParamWrapper;
+        if (Param.IsValid())
+            ParamWrapper.JsonObject = Param->AsObject();
+        FJsonObjectWrapper ResultWrapper;
+        FString ErrorMessage;
+        bool Success;
+        Delegate.ExecuteIfBound(ParamWrapper, ResultWrapper, ErrorMessage, Success);
+        if (Success)
+            Completion(MakeShared<FJsonValueObject>(ResultWrapper.JsonObject));
+        else
+            Error(ErrorMessage);
+    }
+
+    FJsonRequestHandlerDelegate Delegate;
+};
+
+/** RequestHandler using Lambda */
+USTRUCT()
+struct FJsonRequestHandlerWithLambda : public FJsonRequestHandler
+{
+    GENERATED_BODY()
+
+    virtual ~FJsonRequestHandlerWithLambda() override {}
+
+    virtual void HandleRequest(
+        const TSharedPtr<FJsonValue>& Param,
+        const TJsonRequestCompletionCallback& Completion,
+        const TJsonRequestErrorCallback& Error
+    ) override
+    {
+        try
+        {
+            TSharedPtr<FJsonValue> Result = Lambda(Param);
+            Completion(Result);
+        }
+        catch (std::exception& e)
+        {
+            Error(e.what());
+        }
+    }
+
+    TJsonRequestHandlerLambda Lambda;
+};
+
+/** RequestHandler using Lambda from structured params */
+USTRUCT()
+struct FJsonRequestHandlerWithStructuredArrayLambda : public FJsonRequestHandler
+{
+    GENERATED_BODY()
+
+    virtual ~FJsonRequestHandlerWithStructuredArrayLambda() override {}
+
+    virtual void HandleRequest(
+        const TSharedPtr<FJsonValue>& Param,
+        const TJsonRequestCompletionCallback& Completion,
+        const TJsonRequestErrorCallback& Error
+    ) override;
+
+    TArray<EJson> ExpectedTypes;
+    TJsonRequestHandlerStructuredArrayLambda Lambda;
+};
+
+
+
+USTRUCT()
+struct FJsonNotificationHandler
+{
+    GENERATED_BODY()
+
+    virtual ~FJsonNotificationHandler() {}
+
+    virtual void HandleNotification(const TSharedPtr<FJsonValue>& Param) {}
+};
+
+/** RequestHandler using Delegate */
+USTRUCT()
+struct FJsonNotificationHandlerWithDelegate : public FJsonNotificationHandler
+{
+    GENERATED_BODY()
+
+    virtual ~FJsonNotificationHandlerWithDelegate() override {}
+
+    virtual void HandleNotification(const TSharedPtr<FJsonValue>& Param) override
+    {
+        FJsonObjectWrapper ParamWrapper;
+        if (Param.IsValid())
+            ParamWrapper.JsonObject = Param->AsObject();
+        (void)Delegate.ExecuteIfBound(ParamWrapper);
+    }
+
+    FJsonNotificationHandlerDelegate Delegate;
+};
+
+/** RequestHandler using Lambda */
+USTRUCT()
+struct FJsonNotificationHandlerWithLambda : public FJsonNotificationHandler
+{
+    GENERATED_BODY()
+
+    virtual ~FJsonNotificationHandlerWithLambda() override {}
+
+    virtual void HandleNotification(const TSharedPtr<FJsonValue>& Param) override
+    {
+        Lambda(Param);
+    }
+
+    TJsonNotificationHandlerLambda Lambda;
+};
+
+/** RequestHandler using structured array Lambda */
+USTRUCT()
+struct FJsonNotificationHandlerWithStructuredArrayLambda : public FJsonNotificationHandler
+{
+    GENERATED_BODY()
+
+    virtual ~FJsonNotificationHandlerWithStructuredArrayLambda() override {}
+
+    virtual void HandleNotification(const TSharedPtr<FJsonValue>& Param) override;
+
+    TArray<EJson> ExpectedTypes;
+    TJsonNotificationHandlerStructuredArrayLambda Lambda;
+};
