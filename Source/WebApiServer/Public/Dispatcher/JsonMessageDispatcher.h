@@ -24,6 +24,7 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(FJsonNotificationHandlerDelegate, FJsonObjectW
 typedef TFunction<void (const TSharedPtr<FJsonValue>&)> TJsonRequestCompletionCallback;
 typedef TFunction<void (const FString&)> TJsonRequestErrorCallback;
 typedef TFunction<TSharedPtr<FJsonValue> (const TSharedPtr<FJsonValue>&)> TJsonRequestHandlerLambda;
+typedef TFunction<TSharedPtr<FJsonValue> (const TArray<TSharedPtr<FJsonValue>>&)> TJsonRequestHandlerStructuredArrayLambda;
 
 USTRUCT()
 struct FJsonRequestHandler
@@ -97,8 +98,27 @@ struct FJsonRequestHandlerWithLambda : public FJsonRequestHandler
     TJsonRequestHandlerLambda Lambda;
 };
 
+/** RequestHandler using Lambda from structured params */
+USTRUCT()
+struct FJsonRequestHandlerWithStructuredArrayLambda : public FJsonRequestHandler
+{
+    GENERATED_BODY()
+
+    virtual ~FJsonRequestHandlerWithStructuredArrayLambda() override {}
+
+    virtual void HandleRequest(
+        const TSharedPtr<FJsonValue>& Param,
+        const TJsonRequestCompletionCallback& Completion,
+        const TJsonRequestErrorCallback& Error
+    ) override;
+
+    TArray<EJson> ExpectedTypes;
+    TJsonRequestHandlerStructuredArrayLambda Lambda;
+};
+
 
 typedef TFunction<void(const TSharedPtr<FJsonValue>&)> TJsonNotificationHandlerLambda;
+typedef TFunction<void(const TArray<TSharedPtr<FJsonValue>>&)> TJsonNotificationHandlerStructuredArrayLambda;
 
 USTRUCT()
 struct FJsonNotificationHandler
@@ -145,6 +165,20 @@ struct FJsonNotificationHandlerWithLambda : public FJsonNotificationHandler
     TJsonNotificationHandlerLambda Lambda;
 };
 
+/** RequestHandler using structured array Lambda */
+USTRUCT()
+struct FJsonNotificationHandlerWithStructuredArrayLambda : public FJsonNotificationHandler
+{
+    GENERATED_BODY()
+
+    virtual ~FJsonNotificationHandlerWithStructuredArrayLambda() override {}
+
+    virtual void HandleNotification(const TSharedPtr<FJsonValue>& Param) override;
+
+    TArray<EJson> ExpectedTypes;
+    TJsonNotificationHandlerStructuredArrayLambda Lambda;
+};
+
 
 /** </Handlers> */
 
@@ -162,6 +196,7 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Handler|Request")
     bool RegisterRequestHandler(const FString& Method, const FJsonRequestHandlerDelegate& Handler, bool bOverride = false);
     bool RegisterRequestHandler(const FString& Method, const TJsonRequestHandlerLambda& Handler, bool bOverride = false);
+    bool RegisterRequestHandler(const FString& Method, const TArray<EJson>& ExpectedTypes, const TJsonRequestHandlerStructuredArrayLambda& Handler, bool bOverride = false);
 
     /** Check if a request handler is registered */
     UFUNCTION(BlueprintCallable, Category = "Handler|Request")
@@ -175,6 +210,7 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Handler|Notification")
     void RegisterNotificationCallback(const FString& Method, const FJsonNotificationHandlerDelegate& Callback);
     void RegisterNotificationCallback(const FString& Method, const TJsonNotificationHandlerLambda& Callback);
+    void RegisterNotificationCallback(const FString& Method, const TArray<EJson>& ExpectedTypes, const TJsonNotificationHandlerStructuredArrayLambda& Callback);
 
     /** Unregister a notification h */
     UFUNCTION(BlueprintCallable, Category = "Handler|Notification")
