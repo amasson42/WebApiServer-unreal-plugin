@@ -50,7 +50,7 @@ bool UJsonMessageDispatcher::RegisterRequestHandler(const FString& Method, const
     return true;
 }
 
-bool UJsonMessageDispatcher::RegisterAsyncRequestHandler(const FString& Method, const FJsonRequestHandlerDelegateAsync& Handler, bool bOverride)
+bool UJsonMessageDispatcher::RegisterRequestAsyncHandler(const FString& Method, const FJsonRequestHandlerAsyncDelegate& Handler, bool bOverride)
 {
     if (!bOverride && HaveValidRequestHandler(Method))
         return false;

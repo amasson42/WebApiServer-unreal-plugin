@@ -110,7 +110,7 @@ struct FJsonRequestHandlerWithJsonPromise : public FJsonRequestHandler
         const TJsonRequestErrorCallback& Error) override;
 
     TWeakObjectPtr<UObject> Owner;
-    FJsonRequestHandlerDelegateAsync Delegate;
+    FJsonRequestHandlerAsyncDelegate Delegate;
 };
 
 

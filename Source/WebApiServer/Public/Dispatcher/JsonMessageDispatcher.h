@@ -18,7 +18,7 @@
 class UJsonPromise;
 
 DECLARE_DYNAMIC_DELEGATE_FourParams(FJsonRequestHandlerDelegate, FJsonObjectWrapper, Params, FJsonObjectWrapper&, Result, FString&, Error, bool&, Success);
-DECLARE_DYNAMIC_DELEGATE_TwoParams(FJsonRequestHandlerDelegateAsync, FJsonObjectWrapper, Params, UJsonPromise*, Promise);
+DECLARE_DYNAMIC_DELEGATE_TwoParams(FJsonRequestHandlerAsyncDelegate, FJsonObjectWrapper, Params, UJsonPromise*, Promise);
 
 /** Abstract RequestHandler class */
 typedef TFunction<void (const TSharedPtr<FJsonValue>&)> TJsonRequestCompletionCallback;
@@ -52,7 +52,7 @@ public:
     bool RegisterRequestHandler(const FString& Method, const TArray<EJson>& ExpectedTypes, const TJsonRequestHandlerStructuredArrayLambda& Handler, bool bOverride = false);
 
     UFUNCTION(BlueprintCallable, Category = "Handler|Request")
-    bool RegisterAsyncRequestHandler(const FString& Method, const FJsonRequestHandlerDelegateAsync& Handler, bool bOverride = false);
+    bool RegisterRequestAsyncHandler(const FString& Method, const FJsonRequestHandlerAsyncDelegate& Handler, bool bOverride = false);
 
     /** Check if a request handler is registered */
     UFUNCTION(BlueprintCallable, Category = "Handler|Request")
