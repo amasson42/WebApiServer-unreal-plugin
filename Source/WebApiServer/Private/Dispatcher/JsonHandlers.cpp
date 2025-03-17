@@ -3,6 +3,8 @@
 
 #include "Dispatcher/JsonHandlers.h"
 
+#include "Async/JsonPromise.h"
+
 
 FString ToString(EJson Type)
 {
@@ -79,6 +81,28 @@ void FJsonRequestHandlerWithStructuredArrayLambda::HandleRequest(
     {
         Error(e.what());
     }
+}
+
+void FJsonRequestHandlerWithJsonPromise::HandleRequest(const TSharedPtr<FJsonValue>& Param,
+        const TJsonRequestCompletionCallback& Completion,
+        const TJsonRequestErrorCallback& Error)
+{
+    if (!Owner.IsValid())
+        return Error(TEXT("Owner is invalid"));
+
+    UJsonPromise* Promise = NewObject<UJsonPromise>(Owner.Get());
+    Promise->SetOnResolve([Completion](const TSharedPtr<FJsonValue>& Value) {
+        Completion(Value);
+    });
+    Promise->SetOnReject([Error](const FString& ErrorString) {
+        Error(ErrorString);
+    });
+
+    FJsonObjectWrapper ParamWrapper;
+    if (Param.IsValid() && Param->Type == EJson::Object)
+        ParamWrapper.JsonObject = Param->AsObject();
+
+    Delegate.ExecuteIfBound(ParamWrapper, Promise);
 }
 
 

@@ -15,7 +15,10 @@
 #define JSONRPC_RESULT "result"
 #define JSONRPC_ERROR "error"
 
+class UJsonPromise;
+
 DECLARE_DYNAMIC_DELEGATE_FourParams(FJsonRequestHandlerDelegate, FJsonObjectWrapper, Params, FJsonObjectWrapper&, Result, FString&, Error, bool&, Success);
+DECLARE_DYNAMIC_DELEGATE_TwoParams(FJsonRequestHandlerDelegateAsync, FJsonObjectWrapper, Params, UJsonPromise*, Promise);
 
 /** Abstract RequestHandler class */
 typedef TFunction<void (const TSharedPtr<FJsonValue>&)> TJsonRequestCompletionCallback;
@@ -48,6 +51,9 @@ public:
     bool RegisterRequestHandler(const FString& Method, const TJsonRequestHandlerLambda& Handler, bool bOverride = false);
     bool RegisterRequestHandler(const FString& Method, const TArray<EJson>& ExpectedTypes, const TJsonRequestHandlerStructuredArrayLambda& Handler, bool bOverride = false);
 
+    UFUNCTION(BlueprintCallable, Category = "Handler|Request")
+    bool RegisterAsyncRequestHandler(const FString& Method, const FJsonRequestHandlerDelegateAsync& Handler, bool bOverride = false);
+
     /** Check if a request handler is registered */
     UFUNCTION(BlueprintCallable, Category = "Handler|Request")
     bool IsRequestHandlerRegistered(const FString& Method, const FJsonRequestHandlerDelegate& Handler) const;
@@ -78,6 +84,8 @@ public:
     void HandleJsonMessage(const TSharedPtr<FJsonObject>& JsonMessage, TScriptInterface<IMessageSender> MessageSender);
 
 private:
+
+    bool HaveValidRequestHandler(const FString& Method) const;
 
     void HandleRequest(int32 Id, const FString& Method, const TSharedPtr<FJsonValue>& Params, TScriptInterface<IMessageSender> MessageSender);
     void HandleNotification(const FString& Method, const TSharedPtr<FJsonValue>& Params);

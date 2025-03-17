@@ -35,7 +35,7 @@ struct FJsonRequestHandlerWithDelegate : public FJsonRequestHandler
     ) override
     {
         FJsonObjectWrapper ParamWrapper;
-        if (Param.IsValid())
+        if (Param.IsValid() && Param->Type == EJson::Object)
             ParamWrapper.JsonObject = Param->AsObject();
         FJsonObjectWrapper ResultWrapper;
         FString ErrorMessage;
@@ -96,7 +96,25 @@ struct FJsonRequestHandlerWithStructuredArrayLambda : public FJsonRequestHandler
     TJsonRequestHandlerStructuredArrayLambda Lambda;
 };
 
+/** RequestHandler using Promise */
+USTRUCT()
+struct FJsonRequestHandlerWithJsonPromise : public FJsonRequestHandler
+{
+    GENERATED_BODY()
 
+    virtual ~FJsonRequestHandlerWithJsonPromise() override {}
+
+    virtual void HandleRequest(
+        const TSharedPtr<FJsonValue>& Param,
+        const TJsonRequestCompletionCallback& Completion,
+        const TJsonRequestErrorCallback& Error) override;
+
+    TWeakObjectPtr<UObject> Owner;
+    FJsonRequestHandlerDelegateAsync Delegate;
+};
+
+
+/** Notification Handlers */
 
 USTRUCT()
 struct FJsonNotificationHandler
@@ -108,7 +126,7 @@ struct FJsonNotificationHandler
     virtual void HandleNotification(const TSharedPtr<FJsonValue>& Param) {}
 };
 
-/** RequestHandler using Delegate */
+/** NotificationHandler using Delegate */
 USTRUCT()
 struct FJsonNotificationHandlerWithDelegate : public FJsonNotificationHandler
 {
@@ -127,7 +145,7 @@ struct FJsonNotificationHandlerWithDelegate : public FJsonNotificationHandler
     FJsonNotificationHandlerDelegate Delegate;
 };
 
-/** RequestHandler using Lambda */
+/** NotificationHandler using Lambda */
 USTRUCT()
 struct FJsonNotificationHandlerWithLambda : public FJsonNotificationHandler
 {
@@ -143,7 +161,7 @@ struct FJsonNotificationHandlerWithLambda : public FJsonNotificationHandler
     TJsonNotificationHandlerLambda Lambda;
 };
 
-/** RequestHandler using structured array Lambda */
+/** NotificationHandler using structured array Lambda */
 USTRUCT()
 struct FJsonNotificationHandlerWithStructuredArrayLambda : public FJsonNotificationHandler
 {

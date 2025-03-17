@@ -4,14 +4,19 @@
 #include "Dispatcher/JsonMessageDispatcher.h"
 #include "JsonHandlers.h"
 
+bool UJsonMessageDispatcher::HaveValidRequestHandler(const FString& Method) const
+{
+    auto* CurrentHandlerPtr = RequestHandlers.Find(Method);
+    if (CurrentHandlerPtr == nullptr)
+        return false;
+
+    return CurrentHandlerPtr->IsValid();
+}
+
 bool UJsonMessageDispatcher::RegisterRequestHandler(const FString& Method, const FJsonRequestHandlerDelegate& Handler, bool bOverride)
 {
-    if (!bOverride)
-    {
-        auto* CurrentHandlerPtr = RequestHandlers.Find(Method);
-        if (CurrentHandlerPtr && CurrentHandlerPtr->IsValid())
-            return false;
-    }
+    if (!bOverride && HaveValidRequestHandler(Method))
+        return false;
 
     auto NewHandler = MakeShared<FJsonRequestHandlerWithDelegate>();
     NewHandler->Delegate = Handler;
@@ -22,12 +27,8 @@ bool UJsonMessageDispatcher::RegisterRequestHandler(const FString& Method, const
 
 bool UJsonMessageDispatcher::RegisterRequestHandler(const FString& Method, const TJsonRequestHandlerLambda& Handler, bool bOverride)
 {
-    if (!bOverride)
-    {
-        auto* CurrentHandlerPtr = RequestHandlers.Find(Method);
-        if (CurrentHandlerPtr && CurrentHandlerPtr->IsValid())
-            return false;
-    }
+    if (!bOverride && HaveValidRequestHandler(Method))
+        return false;
 
     auto NewHandler = MakeShared<FJsonRequestHandlerWithLambda>();
     NewHandler->Lambda = Handler;
@@ -38,12 +39,8 @@ bool UJsonMessageDispatcher::RegisterRequestHandler(const FString& Method, const
 
 bool UJsonMessageDispatcher::RegisterRequestHandler(const FString& Method, const TArray<EJson>& ExpectedTypes, const TJsonRequestHandlerStructuredArrayLambda& Handler, bool bOverride)
 {
-    if (!bOverride)
-    {
-        auto* CurrentHandlerPtr = RequestHandlers.Find(Method);
-        if (CurrentHandlerPtr && CurrentHandlerPtr->IsValid())
-            return false;
-    }
+    if (!bOverride && HaveValidRequestHandler(Method))
+        return false;
 
     auto NewHandler = MakeShared<FJsonRequestHandlerWithStructuredArrayLambda>();
     NewHandler->ExpectedTypes = ExpectedTypes;
@@ -52,6 +49,20 @@ bool UJsonMessageDispatcher::RegisterRequestHandler(const FString& Method, const
     RequestHandlers.Add(Method, NewHandler);
     return true;
 }
+
+bool UJsonMessageDispatcher::RegisterAsyncRequestHandler(const FString& Method, const FJsonRequestHandlerDelegateAsync& Handler, bool bOverride)
+{
+    if (!bOverride && HaveValidRequestHandler(Method))
+        return false;
+
+    auto NewHandler = MakeShared<FJsonRequestHandlerWithJsonPromise>();
+    NewHandler->Owner = this;
+    NewHandler->Delegate = Handler;
+
+    RequestHandlers.Add(Method, NewHandler);
+    return false;
+}
+
 
 bool UJsonMessageDispatcher::IsRequestHandlerRegistered(const FString& Method, const FJsonRequestHandlerDelegate& Handler) const
 {
@@ -111,6 +122,15 @@ void UJsonMessageDispatcher::UnregisterNotificationCallback(const FString& Metho
 
 /** Message handling */
 
+bool SendMessageIfBound(const TScriptInterface<IMessageSender>& MessageSender, const FString& Message)
+{
+    UObject* Object = MessageSender.GetObject();
+    if (!IsValid(Object))
+        return false;
+
+    return IMessageSender::Execute_SendMessage(Object, Message);
+}
+
 void UJsonMessageDispatcher::HandleMessage(const FString& Message, TScriptInterface<IMessageSender> MessageSender)
 {
     TSharedPtr<FJsonObject> JsonMessage;
@@ -118,7 +138,7 @@ void UJsonMessageDispatcher::HandleMessage(const FString& Message, TScriptInterf
 
     if (!FJsonSerializer::Deserialize(Reader, JsonMessage) || !JsonMessage.IsValid())
     {
-        MessageSender->SendMessage(TEXT("invalid_json"));
+        SendMessageIfBound(MessageSender, TEXT("invalid_json"));
         return;
     }
 
@@ -137,11 +157,11 @@ void SendJsonResponse(const TSharedPtr<FJsonObject>& JsonResponse, TScriptInterf
 
     if (!FJsonSerializer::Serialize(JsonResponse.ToSharedRef(), Writer))
     {
-        MessageSender->SendMessage(TEXT("internal_serialization_error"));
+        SendMessageIfBound(MessageSender, TEXT("internal_serialization_error"));
         return;
     }
 
-    MessageSender->SendMessage(StringResponse);
+    SendMessageIfBound(MessageSender, StringResponse);
 }
 
 TSharedPtr<FJsonObject> MakeErrorJson(int32 Id, const FString &Error)
