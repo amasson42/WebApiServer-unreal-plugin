@@ -207,7 +207,7 @@ void UJsonMessageDispatcher::HandleRequest(int32 Id,const FString& Method, const
         {
             TSharedPtr<FJsonObject> JsonResponse = MakeShared<FJsonObject>();
             JsonResponse->SetNumberField(TEXT(JSONRPC_ID), Id);
-            JsonResponse->SetField(TEXT(JSONRPC_RESULT), Result);
+            JsonResponse->SetField(TEXT(JSONRPC_RESULT), Result != nullptr ? Result : MakeShared<FJsonValueNull>());
             SendJsonResponse(JsonResponse, MessageSender);
         }, [Id, MessageSender](const FString& Error)
         {
