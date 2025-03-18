@@ -35,6 +35,13 @@ typedef TFunction<void(const TArray<TSharedPtr<FJsonValue>>&)> TJsonNotification
 
 struct FJsonNotificationHandler;
 
+UENUM(BlueprintType)
+enum class EJsonObjectWrapperType : uint8 {
+    JOWT_Object = 0 UMETA(DisplayName = "Object"),
+    JOWT_Array = 1 UMETA(DisplayName = "Array"),
+    JOWT_Value = 2 UMETA(DisplayName = "Value"),
+};
+
 /**
  * 
  */
@@ -75,7 +82,7 @@ public:
 
     /** Message handling */
 
-    UFUNCTION(BlueprintCallable) // TODO: Create MessageSender and add it as parameter to be used for returning result
+    UFUNCTION(BlueprintCallable)
     void HandleMessage(const FString& Message, TScriptInterface<IMessageSender> MessageSender);
 
     UFUNCTION(BlueprintCallable)
