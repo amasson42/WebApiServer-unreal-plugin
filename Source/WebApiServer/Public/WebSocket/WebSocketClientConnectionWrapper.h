@@ -3,10 +3,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "INetworkingWebSocket.h"
 #include "Messaging/MessageSender.h"
 #include "WebSocketClientConnectionWrapper.generated.h"
 
+class INetworkingWebSocket;
 class UWebSocketServerWrapper;
 
 UCLASS(ClassGroup = (Networking), BlueprintType)

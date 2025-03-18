@@ -3,6 +3,8 @@
 #include "WebSocket/WebSocketServerWrapper.h"
 
 #include "IWebSocketNetworkingModule.h"
+#include "IWebSocketServer.h"
+#include "INetworkingWebSocket.h"
 #include "WebSocket/WebSocketClientConnectionWrapper.h"
 
 UWebSocketServerWrapper::~UWebSocketServerWrapper()

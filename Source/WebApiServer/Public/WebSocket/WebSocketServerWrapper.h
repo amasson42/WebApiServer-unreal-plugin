@@ -3,9 +3,9 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "IWebSocketServer.h"
 #include "WebSocketServerWrapper.generated.h"
 
+class IWebSocketServer;
 class UWebSocketClientConnectionWrapper;
 
 /**

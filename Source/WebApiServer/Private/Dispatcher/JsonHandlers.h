@@ -37,7 +37,7 @@ struct FJsonRequestHandlerWithDelegate : public FJsonRequestHandler
         EJsonObjectWrapperType ResultType = EJsonObjectWrapperType::JOWT_Object;
         FJsonObjectWrapper ResultWrapper;
         FString ErrorMessage;
-        bool Success;
+        bool Success = false;
         Delegate.ExecuteIfBound(ToJsonWrapper(Param), ResultWrapper, ResultType, ErrorMessage, Success);
         if (Success)
             Completion(FromJsonWrapper(ResultWrapper, ResultType));
