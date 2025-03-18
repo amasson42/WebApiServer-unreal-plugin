@@ -41,6 +41,9 @@ public:
 	void ResolveWithBoolean(bool Result);
 
 	UFUNCTION(BlueprintCallable, Category="Promise|Termination")
+	void ResolveWithArray(const FJsonObjectWrapper& Result);
+
+	UFUNCTION(BlueprintCallable, Category="Promise|Termination")
 	void ResolveWithObject(const FJsonObjectWrapper& Result);
 
 	UFUNCTION(BlueprintCallable, Category="Promise|Termination")

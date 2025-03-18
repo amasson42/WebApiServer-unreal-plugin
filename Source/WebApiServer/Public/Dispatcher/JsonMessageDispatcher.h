@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "UObject/NoExportTypes.h"
 #include "Serialization/JsonTypes.h"
-#include "JsonObjectWrapper.h"
+#include "Json/JsonObjectWrapperType.h"
 #include "Messaging/MessageSender.h"
 #include "JsonMessageDispatcher.generated.h"
 
@@ -17,7 +17,7 @@
 
 class UJsonPromise;
 
-DECLARE_DYNAMIC_DELEGATE_FourParams(FJsonRequestHandlerDelegate, FJsonObjectWrapper, Params, FJsonObjectWrapper&, Result, FString&, Error, bool&, Success);
+DECLARE_DYNAMIC_DELEGATE_FiveParams(FJsonRequestHandlerDelegate, FJsonObjectWrapper, Params, FJsonObjectWrapper&, Result, EJsonObjectWrapperType&, ResultType, FString&, Error, bool&, Success);
 DECLARE_DYNAMIC_DELEGATE_TwoParams(FJsonRequestHandlerAsyncDelegate, FJsonObjectWrapper, Params, UJsonPromise*, Promise);
 
 /** Abstract RequestHandler class */
@@ -34,13 +34,6 @@ typedef TFunction<void(const TSharedPtr<FJsonValue>&)> TJsonNotificationHandlerL
 typedef TFunction<void(const TArray<TSharedPtr<FJsonValue>>&)> TJsonNotificationHandlerStructuredArrayLambda;
 
 struct FJsonNotificationHandler;
-
-UENUM(BlueprintType)
-enum class EJsonObjectWrapperType : uint8 {
-    JOWT_Object = 0 UMETA(DisplayName = "Object"),
-    JOWT_Array = 1 UMETA(DisplayName = "Array"),
-    JOWT_Value = 2 UMETA(DisplayName = "Value"),
-};
 
 /**
  * 

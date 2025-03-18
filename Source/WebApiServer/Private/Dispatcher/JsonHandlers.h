@@ -34,15 +34,13 @@ struct FJsonRequestHandlerWithDelegate : public FJsonRequestHandler
         const TJsonRequestErrorCallback& Error
     ) override
     {
-        FJsonObjectWrapper ParamWrapper;
-        if (Param.IsValid() && Param->Type == EJson::Object)
-            ParamWrapper.JsonObject = Param->AsObject();
+        EJsonObjectWrapperType ResultType = EJsonObjectWrapperType::JOWT_Object;
         FJsonObjectWrapper ResultWrapper;
         FString ErrorMessage;
         bool Success;
-        Delegate.ExecuteIfBound(ParamWrapper, ResultWrapper, ErrorMessage, Success);
+        Delegate.ExecuteIfBound(ToJsonWrapper(Param), ResultWrapper, ResultType, ErrorMessage, Success);
         if (Success)
-            Completion(MakeShared<FJsonValueObject>(ResultWrapper.JsonObject));
+            Completion(FromJsonWrapper(ResultWrapper, ResultType));
         else
             Error(ErrorMessage);
     }
@@ -136,10 +134,7 @@ struct FJsonNotificationHandlerWithDelegate : public FJsonNotificationHandler
 
     virtual void HandleNotification(const TSharedPtr<FJsonValue>& Param) override
     {
-        FJsonObjectWrapper ParamWrapper;
-        if (Param.IsValid())
-            ParamWrapper.JsonObject = Param->AsObject();
-        (void)Delegate.ExecuteIfBound(ParamWrapper);
+        Delegate.ExecuteIfBound(ToJsonWrapper(Param));
     }
 
     FJsonNotificationHandlerDelegate Delegate;

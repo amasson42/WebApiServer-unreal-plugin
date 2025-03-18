@@ -3,7 +3,7 @@
 
 #include "Async/JsonPromise.h"
 
-#include "JsonObjectWrapper.h"
+#include "Json/JsonObjectWrapperType.h"
 
 void UJsonPromise::SetOnResolve(const TFunction<void(const TSharedPtr<FJsonValue>&)>& OnResolveLambda)
 {
@@ -50,6 +50,11 @@ void UJsonPromise::ResolveWithNumber(float Result)
 void UJsonPromise::ResolveWithBoolean(bool Result)
 {
 	ResolveWithValue(MakeShared<FJsonValueBoolean>(Result));
+}
+
+void UJsonPromise::ResolveWithArray(const FJsonObjectWrapper& Result)
+{
+	ResolveWithValue(FromJsonWrapper(Result, EJsonObjectWrapperType::JOWT_Array));
 }
 
 void UJsonPromise::ResolveWithObject(const FJsonObjectWrapper& Result)

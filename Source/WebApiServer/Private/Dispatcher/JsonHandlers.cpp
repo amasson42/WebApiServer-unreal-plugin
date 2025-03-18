@@ -98,11 +98,7 @@ void FJsonRequestHandlerWithJsonPromise::HandleRequest(const TSharedPtr<FJsonVal
         Error(ErrorString);
     });
 
-    FJsonObjectWrapper ParamWrapper;
-    if (Param.IsValid() && Param->Type == EJson::Object)
-        ParamWrapper.JsonObject = Param->AsObject();
-
-    Delegate.ExecuteIfBound(ParamWrapper, Promise);
+    Delegate.ExecuteIfBound(ToJsonWrapper(Param), Promise);
 }
 
 
