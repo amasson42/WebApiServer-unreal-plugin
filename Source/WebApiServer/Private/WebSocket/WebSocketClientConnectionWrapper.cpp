@@ -30,7 +30,7 @@ bool UWebSocketClientConnectionWrapper::SendMessage_Implementation(const FString
 
 bool UWebSocketClientConnectionWrapper::SendData(const TArray<uint8>& Data)
 {
-	if (!Server.IsValid() || !Server->IsStarted())
+	if (!Server.IsValid() || !Server->IsRunning())
 		return false;
 
 	return NetworkingWebSocket->Send(Data.GetData(), Data.Num(), false);

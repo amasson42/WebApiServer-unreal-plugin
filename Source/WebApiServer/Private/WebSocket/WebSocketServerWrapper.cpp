@@ -56,14 +56,14 @@ void UWebSocketServerWrapper::StopServer()
     }
 }
 
-bool UWebSocketServerWrapper::IsStarted() const
+bool UWebSocketServerWrapper::IsRunning() const
 {
-    return ServerWebSocket != nullptr;
+    return ServerWebSocket != nullptr && ServerWebSocket.IsValid();
 }
 
 void UWebSocketServerWrapper::Broadcast(const FString &Payload)
 {
-    if (!IsStarted())
+    if (!IsRunning())
         return;
 
     TArray<uint8> Data;

@@ -30,7 +30,7 @@ public:
     void StopServer();
 
     UFUNCTION(BlueprintCallable, Category = "WebSocketServer")
-    bool IsStarted() const;
+    bool IsRunning() const;
 
     UFUNCTION(BlueprintCallable, Category = "WebSocketServer")
     void Broadcast(const FString &Payload);
