@@ -5,36 +5,24 @@
 
 #include "Json/JsonObjectWrapperType.h"
 
-void UJsonPromise::SetOnResolve(const TFunction<void(const TSharedPtr<FJsonValue>&)>& OnResolveLambda)
-{
-	OnResolve = OnResolveLambda;
-}
-
-void UJsonPromise::SetOnReject(const TFunction<void(const FString&)>& OnRejectLambda)
-{
-	OnReject = OnRejectLambda;
-}
-
 void UJsonPromise::ResolveWithValue(const TSharedPtr<FJsonValue>& JsonValue)
 {
-	if (bTerminated)
-	{
-		UE_LOG(LogTemp, Error, TEXT("JsonPromise: Trying to resolve a finished Promise"));
+	if (!Terminate())
 		return;
-	}
-	bTerminated = true;
-	if (OnResolve)
-		OnResolve(JsonValue);
+
+	OnResolveLambda.Broadcast(JsonValue);
+	if (OnResolve.IsBound())
+		OnResolve.Broadcast(ToJsonWrapper(JsonValue));
 }
 
-void UJsonPromise::Resolve()
+void UJsonPromise::ResolveWithNull()
 {
 	ResolveWithValue(nullptr);
 }
 
-void UJsonPromise::ResolveWithString(const FString& Result)
+void UJsonPromise::ResolveWithBoolean(bool Result)
 {
-	ResolveWithValue(MakeShared<FJsonValueString>(Result));
+	ResolveWithValue(MakeShared<FJsonValueBoolean>(Result));
 }
 
 void UJsonPromise::ResolveWithInteger(int32 Result)
@@ -47,29 +35,48 @@ void UJsonPromise::ResolveWithNumber(float Result)
 	ResolveWithValue(MakeShared<FJsonValueNumber>(Result));
 }
 
-void UJsonPromise::ResolveWithBoolean(bool Result)
+void UJsonPromise::ResolveWithString(const FString& Result)
 {
-	ResolveWithValue(MakeShared<FJsonValueBoolean>(Result));
+	ResolveWithValue(MakeShared<FJsonValueString>(Result));
 }
 
-void UJsonPromise::ResolveWithArray(const FJsonObjectWrapper& Result)
+void UJsonPromise::ResolveWithArray(const TArray<TSharedPtr<FJsonValue>>& Result)
+{
+	ResolveWithValue(MakeShared<FJsonValueArray>(Result));
+}
+
+void UJsonPromise::ResolveWithObject(const TSharedPtr<FJsonObject>& Result)
+{
+	ResolveWithValue(MakeShared<FJsonValueObject>(Result));
+}
+
+void UJsonPromise::ResolveWithWrappedArray(const FJsonObjectWrapper& Result)
 {
 	ResolveWithValue(FromJsonWrapper(Result, EJsonObjectWrapperType::JOWT_Array));
 }
 
-void UJsonPromise::ResolveWithObject(const FJsonObjectWrapper& Result)
+void UJsonPromise::ResolveWithWrappedObject(const FJsonObjectWrapper& Result)
 {
 	ResolveWithValue(MakeShared<FJsonValueObject>(Result.JsonObject));
 }
 
 void UJsonPromise::Reject(const FString& ErrorMessage)
 {
+	if (!Terminate())
+		return;
+
+	OnRejectLambda.Broadcast(ErrorMessage);
+	if (OnReject.IsBound())
+		OnReject.Broadcast(ErrorMessage);
+}
+
+bool UJsonPromise::Terminate()
+{
 	if (bTerminated)
 	{
-		UE_LOG(LogTemp, Error, TEXT("JsonPromise: Trying to reject a terminated promise"));
-		return;
+		UE_LOG(LogTemp, Error, TEXT("JsonPromise: Trying to terminate an already terminated promise"));
+		return false;
 	}
 	bTerminated = true;
-	if (OnReject)
-		OnReject(ErrorMessage);
+	return true;
 }

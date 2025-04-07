@@ -5,7 +5,7 @@
 
 FJsonObjectWrapper ToJsonWrapper(const TSharedPtr<FJsonValue>& Value)
 {
-    if (Value == nullptr)
+    if (!Value.IsValid())
         return FJsonObjectWrapper();
 
     TSharedPtr<FJsonObject> JsonObject = nullptr;
