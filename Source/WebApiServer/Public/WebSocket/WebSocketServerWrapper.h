@@ -6,7 +6,7 @@
 #include "WebSocketServerWrapper.generated.h"
 
 class IWebSocketServer;
-class UWebSocketClientConnectionWrapper;
+class UWebSocketClientWrapper;
 
 /**
  *
@@ -35,13 +35,15 @@ public:
     UFUNCTION(BlueprintCallable, Category = "WebSocketServer")
     void Broadcast(const FString &Payload);
 
-    DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnClientStatus, UWebSocketClientConnectionWrapper *, Client);
+    DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnClientStatus, UWebSocketServerWrapper*, Server, UWebSocketClientWrapper*, Client);
 
     UPROPERTY(BlueprintAssignable, Category = "WebSocketServer")
     FOnClientStatus OnClientConnect;
 
     UPROPERTY(BlueprintAssignable, Category = "WebSocketServer")
     FOnClientStatus OnClientDisconnect;
+
+    const TSet<TObjectPtr<UWebSocketClientWrapper>>& GetClients() const { return WebSocketClients; }
 
 protected:
     void OnWebSocketClientConnected(INetworkingWebSocket *ClientWebSocket);
@@ -53,7 +55,7 @@ private:
     TUniquePtr<IWebSocketServer> ServerWebSocket;
 
     UPROPERTY(BlueprintReadOnly, Category = "WebSocketServer", meta = (AllowPrivateAccess = true))
-    TSet<TObjectPtr<UWebSocketClientConnectionWrapper>> WebSocketClients;
+    TSet<TObjectPtr<UWebSocketClientWrapper>> WebSocketClients;
 
     /** Delegate */
     FTSTicker::FDelegateHandle TickHandle;

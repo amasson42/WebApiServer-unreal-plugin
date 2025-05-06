@@ -5,7 +5,7 @@
 #include "IWebSocketNetworkingModule.h"
 #include "IWebSocketServer.h"
 #include "INetworkingWebSocket.h"
-#include "WebSocket/WebSocketClientConnectionWrapper.h"
+#include "WebSocket/WebSocketClientWrapper.h"
 
 UWebSocketServerWrapper::~UWebSocketServerWrapper()
 {
@@ -83,16 +83,16 @@ void UWebSocketServerWrapper::Broadcast(const FString &Payload)
 
 void UWebSocketServerWrapper::OnWebSocketClientConnected(INetworkingWebSocket *ClientWebSocket)
 {
-    UWebSocketClientConnectionWrapper *NewClient = NewObject<UWebSocketClientConnectionWrapper>();
+    UWebSocketClientWrapper *NewClient = NewObject<UWebSocketClientWrapper>();
     NewClient->Initialize(this, ClientWebSocket);
     WebSocketClients.Add(NewClient);
 
     FWebSocketInfoCallBack ClosedCallBack;
-    ClosedCallBack.BindLambda([NewClient, this]() {
+    ClosedCallBack.BindLambda([this, NewClient]() {
 		WebSocketClients.Remove(NewClient);
-		OnClientDisconnect.Broadcast(NewClient);
+		OnClientDisconnect.Broadcast(this, NewClient);
     });
     ClientWebSocket->SetSocketClosedCallBack(ClosedCallBack);
 
-    OnClientConnect.Broadcast(NewClient);
+    OnClientConnect.Broadcast(this, NewClient);
 }
