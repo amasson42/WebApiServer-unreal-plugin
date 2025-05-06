@@ -15,7 +15,7 @@ bool UJsonMessageDispatcher::HaveValidRequestHandler(const FString& Method) cons
     return CurrentHandlerPtr->IsValid();
 }
 
-bool UJsonMessageDispatcher::RegisterRequestHandler(const FString& Method, const FJsonRequestHandlerDelegate& Handler, UObject* Owner, bool bOverride)
+bool UJsonMessageDispatcher::RegisterRequestHandler(const FString& Method, const FJsonRpcRequestHandlerDelegate& Handler, UObject* Owner, bool bOverride)
 {
     return RegisterRequestHandler(Method, [Handler](const TSharedPtr<FJsonValue>& Params)
     {
@@ -28,16 +28,16 @@ bool UJsonMessageDispatcher::RegisterRequestHandler(const FString& Method, const
     }, Owner, bOverride);
 }
 
-bool UJsonMessageDispatcher::RegisterRequestHandler(const FString& Method, const TJsonRequestHandlerLambda& Handler, UObject* Owner, bool bOverride)
+bool UJsonMessageDispatcher::RegisterRequestHandler(const FString& Method, const FJsonRpcRequestHandlerLambda& Handler, UObject* Owner, bool bOverride)
 {
     if (!bOverride && HaveValidRequestHandler(Method))
         return false;
 
-    auto NewHandler = MakeShared<FJsonRequestHandler>();
+    auto NewHandler = MakeShared<FJsonRpcRequestHandler>();
     NewHandler->Owner = Owner;
     NewHandler->Action = [Handler](const TSharedPtr<FJsonValue>& Param,
-        const TJsonRequestCompletionCallback& CompletionCallback,
-        const TJsonRequestErrorCallback& FailureCallback)
+        const FJsonRpcRequestCompletionCallback& CompletionCallback,
+        const FJsonRpcRequestErrorCallback& FailureCallback)
     {
         try
         {
@@ -105,7 +105,60 @@ bool ValidateParamsArray(const TArray<TSharedPtr<FJsonValue>> &Parameters, const
     return true;
 }
 
-bool UJsonMessageDispatcher::RegisterRequestHandler(const FString& Method, const TArray<EJson>& ExpectedTypes, const TJsonRequestHandlerStructuredArrayLambda& Handler, UObject* Owner, bool bOverride)
+bool ValidateParamsObject(const TSharedPtr<FJsonObject>& Parameter, const TMap<FString, EJson>& ExpectedTypes, FString *ErrorMessage)
+{
+    TArray<FString> MissingProperties;
+    TArray<FString> WrongProperties;
+
+    for (const auto& [Name, Type] : ExpectedTypes)
+    {
+        TSharedPtr<FJsonValue>* ParameterValuePtr = Parameter->Values.Find(Name);
+        if (ParameterValuePtr == nullptr)
+        {
+            if (ErrorMessage == nullptr)
+                return false;
+
+            MissingProperties.Add(FString::Printf(TEXT("\"%s\": %s"), *Name, *ToString(Type)));
+            continue;
+        }
+
+        const EJson ParameterType = ParameterValuePtr->Get() ? ParameterValuePtr->Get()->Type : EJson::None;
+        if (ParameterType != Type)
+        {
+            if (ErrorMessage == nullptr)
+                return false;
+
+            WrongProperties.Add(FString::Printf(TEXT("\"%s\": %s instead of %s"), *Name, *ToString(ParameterType), *ToString(Type)));
+        }
+    }
+
+    if (ErrorMessage)
+    {
+        *ErrorMessage = TEXT("Invalid type received.");
+
+        if (!MissingProperties.IsEmpty())
+        {
+            *ErrorMessage += TEXT(" Missing properties {");
+            for (const FString& MissingProperty : MissingProperties)
+                *ErrorMessage += MissingProperty + TEXT(", ");
+            ErrorMessage->RemoveFromEnd(TEXT(", "));
+            *ErrorMessage += TEXT("}.");
+        }
+
+        if (!WrongProperties.IsEmpty())
+        {
+            *ErrorMessage += TEXT(" Wrong types {");
+            for (const FString& WrongProperty : WrongProperties)
+                *ErrorMessage += WrongProperty + TEXT(", ");
+            ErrorMessage->RemoveFromEnd(TEXT(", "));
+            *ErrorMessage += TEXT("}.");
+        }
+    }
+
+    return MissingProperties.IsEmpty() && WrongProperties.IsEmpty();
+}
+
+bool UJsonMessageDispatcher::RegisterRequestHandler(const FString& Method, const TArray<EJson>& ExpectedTypes, const FJsonRpcRequestHandlerStructuredArrayLambda& Handler, UObject* Owner, bool bOverride)
 {
     return RegisterRequestHandler(
         Method,
@@ -126,18 +179,40 @@ bool UJsonMessageDispatcher::RegisterRequestHandler(const FString& Method, const
     );
 }
 
-bool UJsonMessageDispatcher::RegisterRequestAsyncHandler(const FString& Method, const FJsonRequestHandlerAsyncDelegate& Handler, UObject* Owner, bool bOverride)
+bool UJsonMessageDispatcher::RegisterRequestHandler(const FString& Method, const TMap<FString, EJson>& ExpectedTypes, const FJsonRpcRequestHandlerStructuredObjectLambda& Handler, UObject* Owner, bool bOverride)
+{
+    return RegisterRequestHandler(
+        Method,
+        [Handler, ExpectedTypes](const TSharedPtr<FJsonValue>& Params)
+        {
+            if (Params && Params->Type != EJson::Object)
+                throw FString(TEXT("Invalid parameters (not an object)"));
+
+            TSharedPtr<FJsonObject> Parameter = Params ? Params->AsObject() : MakeShared<FJsonObject>();
+            FString ErrorMessage;
+            if (!ValidateParamsObject(Parameter, ExpectedTypes, &ErrorMessage))
+                throw ErrorMessage;
+
+            return Handler(Parameter);
+        },
+        Owner,
+        bOverride
+    );
+}
+
+
+bool UJsonMessageDispatcher::RegisterRequestAsyncHandler(const FString& Method, const FJsonRpcRequestHandlerAsyncDelegate& Handler, UObject* Owner, bool bOverride)
 {
     if (!bOverride && HaveValidRequestHandler(Method))
         return false;
 
     TWeakObjectPtr<UObject> PromiseOuter = this;
-    auto NewHandler = MakeShared<FJsonRequestHandler>();
+    auto NewHandler = MakeShared<FJsonRpcRequestHandler>();
     NewHandler->Owner = Owner;
     NewHandler->Action = [Handler, PromiseOuter](
         const TSharedPtr<FJsonValue>& Params,
-        const TJsonRequestCompletionCallback& CompletionCallback,
-        const TJsonRequestErrorCallback& FailureCallback)
+        const FJsonRpcRequestCompletionCallback& CompletionCallback,
+        const FJsonRpcRequestErrorCallback& FailureCallback)
     {
         UJsonPromise* Promise = NewObject<UJsonPromise>(PromiseOuter.Get());
         Promise->GetOnResolve().AddLambda(CompletionCallback);
@@ -186,42 +261,38 @@ void UJsonMessageDispatcher::UnregisterRequestHandlersFromOwner(UObject* Owner)
     }
 }
 
-void UJsonMessageDispatcher::RegisterNotificationHandler(const FString& Method, const FJsonNotificationHandlerDelegate& Handler, UObject* Owner)
+void UJsonMessageDispatcher::RegisterNotificationHandler(const FString& Method, const FJsonRpcNotificationHandlerDelegate& Handler, UObject* Owner)
 {
     RegisterNotificationHandler(
         Method,
         [Handler](const TSharedPtr<FJsonValue>& Params)
         {
-            FJsonObjectWrapper Result;
-            EJsonObjectWrapperType ResultType = EJsonObjectWrapperType::JOWT_Object;
-            FString Error;
-            bool bSuccess = true;
             Handler.ExecuteIfBound(ToJsonWrapper(Params));
         }, Owner);
 }
 
-void UJsonMessageDispatcher::RegisterNotificationHandler(const FString& Method, const TJsonNotificationHandlerLambda& Handler, UObject* Owner)
+void UJsonMessageDispatcher::RegisterNotificationHandler(const FString& Method, const FJsonRpcNotificationHandlerLambda& Handler, UObject* Owner)
 {
-    auto NewHandler = MakeShared<FJsonNotificationHandler>();
+    auto NewHandler = MakeShared<FJsonRpcNotificationHandler>();
     NewHandler->Owner = Owner;
     NewHandler->Action = Handler;
 
-    if (TArray<TSharedPtr<FJsonNotificationHandler>>* MethodHandlers = NotificationHandlers.Find(Method))
+    if (TArray<TSharedPtr<FJsonRpcNotificationHandler>>* MethodHandlers = NotificationHandlers.Find(Method))
         MethodHandlers->Add(NewHandler);
     else
         NotificationHandlers.Add(Method, {NewHandler});
 }
 
-void UJsonMessageDispatcher::RegisterNotificationHandler(const FString& Method, const TArray<EJson>& ExpectedTypes, const TJsonNotificationHandlerStructuredArrayLambda& Handler, UObject* Owner)
+void UJsonMessageDispatcher::RegisterNotificationHandler(const FString& Method, const TArray<EJson>& ExpectedTypes, const FJsonRpcNotificationHandlerStructuredArrayLambda& Handler, UObject* Owner)
 {
     RegisterNotificationHandler(
         Method,
         [Handler, ExpectedTypes](const TSharedPtr<FJsonValue>& Params)
         {
-            if (Params && Params->Type == EJson::Array)
+            if (Params && Params->Type != EJson::Array)
                 return;
 
-            TArray<TSharedPtr<FJsonValue>> Parameters = Params->AsArray();
+            TArray<TSharedPtr<FJsonValue>> Parameters = Params ? Params->AsArray() : TArray<TSharedPtr<FJsonValue>>();
             if (!ValidateParamsArray(Parameters, ExpectedTypes, nullptr))
                 return;
 
@@ -229,9 +300,26 @@ void UJsonMessageDispatcher::RegisterNotificationHandler(const FString& Method, 
         }, Owner);
 }
 
+void UJsonMessageDispatcher::RegisterNotificationHandler(const FString& Method, const TMap<FString, EJson>& ExpectedTypes, const FJsonRpcNotificationHandlerStructuredObjectLambda& Handler, UObject* Owner)
+{
+    RegisterNotificationHandler(
+        Method,
+        [Handler, ExpectedTypes](const TSharedPtr<FJsonValue>& Params)
+        {
+            if (Params && Params->Type != EJson::Object)
+                return;
+
+            TSharedPtr<FJsonObject> Parameter = Params ? Params->AsObject() : MakeShared<FJsonObject>();
+            if (!ValidateParamsObject(Parameter, ExpectedTypes, nullptr))
+                return;
+
+            Handler(Parameter);
+        }, Owner);
+}
+
 bool UJsonMessageDispatcher::IsNotificationHandlerRegistered(const FString& Method, UObject* Owner) const
 {
-    const TArray<TSharedPtr<FJsonNotificationHandler>>* HandlersPtr = NotificationHandlers.Find(Method);
+    const TArray<TSharedPtr<FJsonRpcNotificationHandler>>* HandlersPtr = NotificationHandlers.Find(Method);
     if (HandlersPtr == nullptr)
         return false;
 
@@ -249,7 +337,7 @@ bool UJsonMessageDispatcher::IsNotificationHandlerRegistered(const FString& Meth
 
 void UJsonMessageDispatcher::UnregisterNotificationHandler(const FString& Method, UObject* Owner)
 {
-    TArray<TSharedPtr<FJsonNotificationHandler>>* HandlersPtr = NotificationHandlers.Find(Method);
+    TArray<TSharedPtr<FJsonRpcNotificationHandler>>* HandlersPtr = NotificationHandlers.Find(Method);
     if (HandlersPtr == nullptr)
         return;
 
@@ -294,7 +382,7 @@ bool SendMessageIfBound(const TScriptInterface<IMessageSender>& MessageSender, c
     return IMessageSender::Execute_SendMessage(Object, Message);
 }
 
-void SendJsonMessage(const TScriptInterface<IMessageSender>& MessageSender, const TSharedPtr<FJsonObject>& JsonResponse)
+bool SendJsonMessage(const TScriptInterface<IMessageSender>& MessageSender, const TSharedPtr<FJsonObject>& JsonResponse)
 {
     FString StringResponse;
     TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&StringResponse);
@@ -302,13 +390,13 @@ void SendJsonMessage(const TScriptInterface<IMessageSender>& MessageSender, cons
     if (!FJsonSerializer::Serialize(JsonResponse.ToSharedRef(), Writer))
     {
         SendMessageIfBound(MessageSender, TEXT("internal_serialization_error"));
-        return;
+        return false;
     }
 
-    SendMessageIfBound(MessageSender, StringResponse);
+    return SendMessageIfBound(MessageSender, StringResponse);
 }
 
-void UJsonMessageDispatcher::SendRequestWithCompletion(const TScriptInterface<IMessageSender>& MessageSender, const FString& Method, const FJsonObjectWrapper& Params, EJsonObjectWrapperType ParamsType, const FJsonResponseHandlerDelegate& CompletionHandler, float Timeout)
+void UJsonMessageDispatcher::SendRequestWithCompletion(const TScriptInterface<IMessageSender>& MessageSender, const FString& Method, const FJsonObjectWrapper& Params, EJsonObjectWrapperType ParamsType, const FJsonRpcResponseHandlerDelegate& CompletionHandler, float Timeout)
 {
     SendRequest(MessageSender, Method, FromJsonWrapper(Params, ParamsType),
     [CompletionHandler](bool bSuccess, const TSharedPtr<FJsonValue>& Result, const FString& Error)
@@ -317,7 +405,7 @@ void UJsonMessageDispatcher::SendRequestWithCompletion(const TScriptInterface<IM
     }, Timeout);
 }
 
-void UJsonMessageDispatcher::SendRequestWithSuccessOrFailure(const TScriptInterface<IMessageSender>& MessageSender, const FString& Method, const FJsonObjectWrapper& Params, EJsonObjectWrapperType ParamsType, const FJsonResponseSuccessHandlerDelegate& SuccessHandler, const FJsonResponseFailureHandlerDelegate& FailureHandler, float Timeout)
+void UJsonMessageDispatcher::SendRequestWithSuccessOrFailure(const TScriptInterface<IMessageSender>& MessageSender, const FString& Method, const FJsonObjectWrapper& Params, EJsonObjectWrapperType ParamsType, const FJsonRpcResponseSuccessHandlerDelegate& SuccessHandler, const FJsonRpcResponseFailureHandlerDelegate& FailureHandler, float Timeout)
 {
     SendRequest(MessageSender, Method, FromJsonWrapper(Params, ParamsType),
         [SuccessHandler](const TSharedPtr<FJsonValue>& Result)
@@ -336,14 +424,14 @@ void UJsonMessageDispatcher::SendRequestWithPromise(const TScriptInterface<IMess
 }
 
 
-void UJsonMessageDispatcher::SendRequest(const TScriptInterface<IMessageSender>& MessageSender, const FString& Method, const TSharedPtr<FJsonValue>& Params, const TJsonResponseHandlerLambda& CompletionHandler, float Timeout)
+void UJsonMessageDispatcher::SendRequest(const TScriptInterface<IMessageSender>& MessageSender, const FString& Method, const TSharedPtr<FJsonValue>& Params, const FJsonRpcResponseHandlerLambda& CompletionHandler, float Timeout)
 {
     int32 RequestId = ++LastRequestId;
 
     if (LastRequestId >= JSONRPC_ID_MAX)
         LastRequestId = 0;
 
-    TSharedPtr<FJsonResponseHandler> NewHandler = MakeShared<FJsonResponseHandler>();
+    TSharedPtr<FJsonRpcResponseHandler> NewHandler = MakeShared<FJsonRpcResponseHandler>();
     NewHandler->CompletionHandler = CompletionHandler;
     NewHandler->Timeout = FDateTime::UtcNow() + FTimespan::FromSeconds(Timeout);
     ResponseHandlers.Add(RequestId, NewHandler);
@@ -355,10 +443,13 @@ void UJsonMessageDispatcher::SendRequest(const TScriptInterface<IMessageSender>&
     if (Params.IsValid())
         Request->SetField(TEXT(JSONRPC_PARAMS), Params);
 
-    SendJsonMessage(MessageSender, Request);
+    if (!SendJsonMessage(MessageSender, Request))
+    {
+        HandleResponse(RequestId, nullptr, MakeShared<FJsonValueString>(TEXT("failed_to_send_message")));
+    }
 }
 
-void UJsonMessageDispatcher::SendRequest(const TScriptInterface<IMessageSender>& MessageSender, const FString& Method, const TSharedPtr<FJsonValue>& Params, const TJsonResponseSuccessHandlerLambda& SuccessHandler, const TJsonResponseFailureHandlerLambda& FailureHandler, float Timeout)
+void UJsonMessageDispatcher::SendRequest(const TScriptInterface<IMessageSender>& MessageSender, const FString& Method, const TSharedPtr<FJsonValue>& Params, const FJsonRpcResponseSuccessHandlerLambda& SuccessHandler, const FJsonRpcResponseFailureHandlerLambda& FailureHandler, float Timeout)
 {
     SendRequest(MessageSender, Method, Params,
         [SuccessHandler, FailureHandler](bool bSuccess, const TSharedPtr<FJsonValue>& Result, const FString& Error)
@@ -453,9 +544,12 @@ void UJsonMessageDispatcher::HandleJsonMessage(const TSharedPtr<FJsonObject>& Js
 
 void UJsonMessageDispatcher::HandleRequest(int32 Id,const FString& Method, const TSharedPtr<FJsonValue>& Params, TScriptInterface<IMessageSender> MessageSender)
 {
-    TSharedPtr<FJsonRequestHandler>* Handler = RequestHandlers.Find(Method);
+    TSharedPtr<FJsonRpcRequestHandler>* Handler = RequestHandlers.Find(Method);
     if (Handler == nullptr || !Handler->IsValid())
-        return SendJsonMessage(MessageSender, MakeErrorJson(Id, FString::Printf(TEXT("no handlers for method %s"), *Method)));
+    {
+        SendJsonMessage(MessageSender, MakeErrorJson(Id, FString::Printf(TEXT("no handlers for method %s"), *Method)));
+        return;
+    }
 
     (*Handler)->Action(Params,
         [Id, MessageSender](const TSharedPtr<FJsonValue>& Result)
@@ -484,7 +578,7 @@ void UJsonMessageDispatcher::HandleNotification(const FString& Method, const TSh
 
 void UJsonMessageDispatcher::HandleResponse(int32 Id, const TSharedPtr<FJsonValue>& Result, const TSharedPtr<FJsonValue>& Error)
 {
-    TSharedPtr<FJsonResponseHandler> Handler;
+    TSharedPtr<FJsonRpcResponseHandler> Handler;
 
     if (!ResponseHandlers.RemoveAndCopyValue(Id, Handler))
         return;

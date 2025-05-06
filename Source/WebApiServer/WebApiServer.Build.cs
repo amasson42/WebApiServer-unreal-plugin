@@ -6,6 +6,8 @@ public class WebApiServer : ModuleRules
 {
 	public WebApiServer(ReadOnlyTargetRules Target) : base(Target)
 	{
+		bEnableExceptions = true;
+
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 		
 		PublicIncludePaths.AddRange(
@@ -38,6 +40,7 @@ public class WebApiServer : ModuleRules
 				"Engine",
 				"Slate",
 				"SlateCore",
+				"Sockets",
                 "WebSocketNetworking",
                 "Json",
                 "JsonUtilities",
